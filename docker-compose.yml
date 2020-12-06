@@ -1,0 +1,18 @@
+version: "3.5"
+services:
+
+  gapps:
+    command: "sh /opt/entrypoint.sh"
+    image: python:3.7-alpine
+    volumes:
+      - ./:/opt/:ro
+    networks:
+      - wannabe_public
+      - wannabe_internal
+    restart: unless-stopped
+
+networks:
+  wannabe_public:
+    external: true
+  wannabe_internal:
+    external: true
