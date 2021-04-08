@@ -1,14 +1,23 @@
 import os
+import time
 import configparser
-import json
+import logging
+from pathlib import Path
 
 from wannabe import wannabe
 from maillist import maillist
 
+logging.basicConfig(format='%(asctime)s %(message)s')
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 config = configparser.RawConfigParser()
 config.read('config.ini')
 
-# Connect to wannabe
+logger.debug("started...")
+
+# Connect to Wannabe
 wannabe = wannabe(
     db_host='mysql',
     db_user=config['wannabe']['db_user'],
@@ -17,7 +26,7 @@ wannabe = wannabe(
     event=config['wannabe']['event']
 )
 
-# Connect to Google Apps
+# Connect to MailMan
 maillist = maillist(
     rest_url=config['mailman']['rest_url'],
     rest_username=config['mailman']['rest_username'],
@@ -25,16 +34,25 @@ maillist = maillist(
     domain=config['mailman']['domain']
 )
 
-wb_maillist = wannabe.get_lists(config['mailman']['domain'])
-mailman_mailists = maillist.get_lists()
+running = True
 
-todo_create = set(wb_maillist) - set(mailman_mailists)
-if len(todo_create) > 0:
-    print("Creating lists")
-    for list in todo_create:
-        print(list)
-        maillist.create_list(list=list)
+while running:
+    wb_maillist = wannabe.get_lists(config['mailman']['domain'])
+    mailman_mailists = maillist.get_lists()
 
-for list in wb_maillist:
-    wb_members = wannabe.get_members_of_list(list)
-    print(maillist.sync_members(list, wb_members))
+    todo_create = set(wb_maillist) - set(mailman_mailists)
+    if len(todo_create) > 0:
+        logger.info("Creating lists")
+        for list in todo_create:
+            logger.info(str(list))
+            maillist.create_list(list=list)
+
+    for list in wb_maillist:
+        wb_members = wannabe.get_members_of_list(list)
+        if maillist.sync_members(list, wb_members) is True:
+            logger.info("List {} synced successfully".format(list))
+        else:
+            logger.error("Failed to sync members")
+
+    Path('last_updated.txt').touch()
+    time.sleep(600)

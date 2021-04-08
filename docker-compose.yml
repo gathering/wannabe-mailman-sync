@@ -1,18 +1,27 @@
 version: "3.5"
 services:
 
-  gapps:
+  mailman-sync:
+    image: python:3.9-alpine
     command: "sh /opt/entrypoint.sh"
-    image: python:3.7-alpine
     volumes:
       - ./:/opt/:ro
+      - ./last_updated.txt:/opt/last_updated.txt:rw
     networks:
-      - wannabe_public
+      - webproxy
       - wannabe_internal
+    restart: unless-stopped
+  filestat:
+    image: mdoubez/filestat_exporter
+    command: -path.cwd /opt 'last_updated.txt'
+    volumes:
+      - ./last_updated.txt:/opt/last_updated.txt:ro
+    ports:
+      - "0.0.0.0:9943:9943"
     restart: unless-stopped
 
 networks:
-  wannabe_public:
+  webproxy:
     external: true
   wannabe_internal:
     external: true

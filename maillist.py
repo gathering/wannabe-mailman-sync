@@ -1,4 +1,5 @@
 import re
+import logging
 
 from mailmanclient import Client, Settings
 from mailmanclient.restobjects.domain import Domain
@@ -9,6 +10,9 @@ class maillist(object):
             args['rest_url'], args['rest_username'], args['rest_password'])
         self.domain = self.client.get_domain(args['domain'])
 
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+
     def get_lists(self):
         mailists = []
         for list in self.domain.lists:
@@ -18,15 +22,14 @@ class maillist(object):
     def create_list(self, **args):
         list = args['list']
         name = list.split('@')[0]
-        print(list)
-        print(name)
+        self.logger.debug(list)
+        self.logger.debug(name)
         self.domain.create_list(name)
         self.set_settings(list)
 
     def set_settings(self, list_fqdn):
         list = self.client.get_list(list_fqdn)
         for key, value in self.default_settings().items():
-            #print(key)
             list.settings[key] = value
         list.settings.save()
 
@@ -43,19 +46,19 @@ class maillist(object):
 
         todo_add = set(wannabe_members) - set(members)
         if len(todo_add) > 0:
-            print('Will add')
-            print(todo_add)
+            self.logger.info('Will add users to {}'.format(list_fqdn))
+            self.logger.info(str(todo_add))
 
         todo_remove = set(members) - set(wannabe_members)
         if len(todo_remove) > 0:
-            print('Will remove')
-            print(todo_remove)
+            self.logger.info('Will remove users from {}'.format(list_fqdn))
+            self.logger.info(str(todo_remove))
         for user in todo_remove:
-            list.unsubscribe(user)
+            list.unsubscribe(user, pre_approved=True)
         for user in todo_add:
             list.subscribe(user, pre_verified=True, pre_confirmed=True, pre_approved=True)
-        return True
 
+        return True
 
     def default_settings(self):
         return {
