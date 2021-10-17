@@ -1,8 +1,7 @@
-import re
 import logging
 
-from mailmanclient import Client, Settings
-from mailmanclient.restobjects.domain import Domain
+from mailmanclient import Client
+
 
 class maillist(object):
     def __init__(self, **args):
@@ -56,7 +55,12 @@ class maillist(object):
         for user in todo_remove:
             list.unsubscribe(user, pre_approved=True)
         for user in todo_add:
-            list.subscribe(user, pre_verified=True, pre_confirmed=True, pre_approved=True)
+            list.subscribe(
+                user,
+                pre_verified=True,
+                pre_confirmed=True,
+                pre_approved=True
+            )
 
         return True
 

@@ -1,44 +1,75 @@
-import pymysql
-
 import re
+import requests
+import logging
+
 
 class wannabe(object):
-    """Wannabe SQL Client"""
+    """Wannabe5 Client"""
 
     def __init__(self, **args):
-        self.event = args['event']
-        self.eventId = None
-        self.connection = pymysql.connect(
-            host=args['db_host'],
-            user=args['db_user'],
-            password=args['db_password'],
-            db=args['db_name'],
-            charset='utf8mb4',
-            cursorclass=pymysql.cursors.DictCursor
+        self.event_id = args['event_id']
+        self.api_url = args['api_url']
+        self.client_id = args['client_id']
+        self.client_secret = args['client_secret']
+
+        self.token_url = "{}/auth/services/login".format(self.api_url)
+        self.token = None
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.DEBUG)
+        self.login()
+
+    def login(self):
+        payload = {
+            'client_secret': self.client_secret,
+            'client_id': self.client_id,
+            'grant_type': 'client_credentials'
+        }
+        r = requests.post(self.token_url, data=payload)
+        if(r.status_code != 200):
+            self.logger.error(
+                "Failed to login to Wannabe. Got status code: {}"
+                .format(r.status_code)
+            )
+            raise Exception("Failed to login to Wannabe")
+
+        self.token = r.json()['access_token']
+
+    def request(self, method, path, data=None):
+        url = "{}/{}".format(self.api_url, path)
+        cookies = dict(wannabe_jwt=self.token)
+        r = requests.request(
+            method,
+            url,
+            cookies=cookies,
+            json=data
         )
-        self.cursor = self.connection.cursor()
-        self.cursor.execute("SELECT id FROM wb4_events WHERE reference = %s", self.event)
-        for data in self.cursor.fetchall():
-            self.eventId = int(data['id'])
-        if self.eventId is None:
-            raise Exception('Event {} not found'.format(self.event))
+        if(r.status_code != 200):
+            self.logger.error(
+                "Request failed to {} Got status code: {}"
+                .format(url, r.status_code)
+            )
+            raise Exception("API request failed")
+        return r.json()
 
     def get_lists(self, domain):
-        wb_maillist = []
+        wb_maillist = {}
 
-        self.cursor.execute("SELECT address FROM wb4_mailinglists WHERE event_id = %s", self.eventId)
-        for data in self.cursor.fetchall():
-            if data['address'].split('@')[1] == domain:
-                wb_maillist.append(data['address'].lower())
+        lists = self.request(
+            'GET', 'communication/lists?per_page=100'  # TODO Add event check
+        )['data']
+
+        for list in lists:
+            if list['identifier'].split('@')[1] == domain:
+                wb_maillist.update({list['identifier'].lower(): list})
         return wb_maillist
 
     def get_members_of_list(self, list):
-        self.cursor.execute("SELECT id FROM wb4_mailinglists WHERE event_id = %s AND address = %s", (self.eventId, list))
-        for data in self.cursor.fetchall():
-            listId = data['id']
+        print(list['id'])
+        recipients = self.request(
+            'GET', 'communication/lists/{}/recipients'.format(list['id'])
+        )['values']
         members = []
-        self.cursor.execute("call mailinglistaddresses(%s)", listId)
-        for data in self.cursor.fetchall():
-            user_email = re.sub(r'(\+.*?)(?=\@)', '', data['address'].lower())
+        for data in recipients:
+            user_email = re.sub(r'(\+.*?)(?=\@)', '', data['email'].lower())
             members.append(user_email)
         return members
