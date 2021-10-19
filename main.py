@@ -42,7 +42,6 @@ while running:
 
     for list in wb_maillist.values():
         wb_members = wannabe.get_members_of_list(list)
-        print(wb_members)
         if maillist.sync_members(list['identifier'], wb_members) is True:
             logger.info(
                 "List {} synced successfully".format(list['identifier'])

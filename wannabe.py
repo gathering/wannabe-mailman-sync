@@ -1,6 +1,7 @@
 import re
 import requests
 import logging
+from datetime import datetime, timedelta
 
 
 class wannabe(object):
@@ -14,6 +15,7 @@ class wannabe(object):
 
         self.token_url = "{}/auth/services/login".format(self.api_url)
         self.token = None
+        self.token_valid = None
         self.logger = logging.getLogger(__name__)
         self.logger.setLevel(logging.DEBUG)
         self.login()
@@ -33,8 +35,14 @@ class wannabe(object):
             raise Exception("Failed to login to Wannabe")
 
         self.token = r.json()['access_token']
+        self.token_valid = datetime.now() + timedelta(
+                                                seconds=r.json()['expires_in'])
 
     def request(self, method, path, data=None):
+        # Login if token is not valid
+        if(self.token_valid < datetime.now() + timedelta(seconds=30)):
+            self.logger.info("Token not valid - renewing")
+            self.login()
         url = "{}/{}".format(self.api_url, path)
         cookies = dict(wannabe_jwt=self.token)
         r = requests.request(
@@ -55,7 +63,7 @@ class wannabe(object):
         wb_maillist = {}
 
         lists = self.request(
-            'GET', 'communication/lists?per_page=100'  # TODO Add event check
+            'GET', 'communication/lists?per_page=100'
         )['data']
 
         for list in lists:
@@ -64,7 +72,6 @@ class wannabe(object):
         return wb_maillist
 
     def get_members_of_list(self, list):
-        print(list['id'])
         recipients = self.request(
             'GET', 'communication/lists/{}/recipients'.format(list['id'])
         )['values']
