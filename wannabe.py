@@ -63,7 +63,7 @@ class wannabe(object):
         wb_maillist = {}
 
         lists = self.request(
-            'GET', 'communication/lists?per_page=100'
+            'GET', 'communication/lists?per_page=100&event_id=2&type=mail' # TODO Event should not be hardcoded here. And not have the 100 limit
         )['data']
 
         for list in lists:
