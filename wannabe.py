@@ -39,6 +39,10 @@ class wannabe(object):
                                                 seconds=r.json()['expires_in'])
 
     def request(self, method, path, data=None):
+        conn_timeout = 5
+        read_timeout = 30
+        timeouts = (conn_timeout, read_timeout)
+
         # Login if token is not valid
         if(self.token_valid < datetime.now() + timedelta(seconds=30)):
             self.logger.info("Token not valid - renewing")
@@ -49,7 +53,8 @@ class wannabe(object):
             method,
             url,
             cookies=cookies,
-            json=data
+            json=data,
+            timeout=timeouts
         )
         if(r.status_code != 200):
             self.logger.error(
