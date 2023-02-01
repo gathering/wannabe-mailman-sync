@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 requests_log = logging.getLogger("requests.packages.urllib3")
-requests_log.setLevel(logging.DEBUG)
+requests_log.setLevel(logging.INFO)
 requests_log.propagate = True
 
 logger.debug("started...")
@@ -64,6 +64,8 @@ while running:
             )
         else:
             logger.error("Failed to sync members")
+
+        logger.info("Sync finished: ".format(signal.alarm()))
 
     # Stop timer
     signal.alarm(0)
