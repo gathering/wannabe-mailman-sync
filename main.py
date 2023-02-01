@@ -1,14 +1,22 @@
 import os
 import time
 import logging
+import signal
+from http.client import HTTPConnection
 
 from wannabe import wannabe
 from maillist import maillist
+
+HTTPConnection.debuglevel = 1
 
 logging.basicConfig(format='%(asctime)s %(message)s')
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
+
+requests_log = logging.getLogger("requests.packages.urllib3")
+requests_log.setLevel(logging.DEBUG)
+requests_log.propagate = True
 
 logger.debug("started...")
 
@@ -28,8 +36,16 @@ maillist = maillist(
     domain=os.environ.get('DOMAIN')
 )
 
+def handle_timeout(signum, frame):
+     logger.error("Run is taking to long, exit")
+     raise Exception("end of time")
+
+signal.signal(signal.SIGALRM, handle_timeout)
+
 running = True
 while running:
+    # Start timer
+    signal.alarm(60)
     wb_maillist = wannabe.get_lists(os.environ.get('DOMAIN'))
     mailman_mailists = maillist.get_lists()
 
@@ -49,4 +65,6 @@ while running:
         else:
             logger.error("Failed to sync members")
 
+    # Stop timer
+    signal.alarm(0)
     time.sleep(600)
