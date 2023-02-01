@@ -65,8 +65,6 @@ while running:
         else:
             logger.error("Failed to sync members")
 
-        logger.info("Sync finished: ".format(signal.alarm()))
-
     # Stop timer
-    signal.alarm(0)
+    logger.info("Sync finished: ".format(signal.alarm(0)))
     time.sleep(600)
