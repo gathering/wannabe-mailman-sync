@@ -135,6 +135,7 @@ class maillist(object):
             "require_explicit_destination": False,
             "respond_to_post_requests": True,
             "send_welcome_message": False,
+            "send_goodbye_message": False,
             "subscription_policy": "moderate",
             "unsubscription_policy": "moderate",
             "usenet_watermark": None,
